@@ -1,0 +1,423 @@
+    
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Cliente - Estabilizador CONSOY</title>
+    <!-- Librería de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --primary-color: #002366; /* Azul corporativo */
+            --secondary-color: #eef2f9;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --text-color: #333;
+            --light-text-color: #666;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        h1, h2 { text-align: center; color: var(--primary-color); }
+        p { text-align: center; color: var(--light-text-color); }
+        
+        /* Inputs y Botones */
+        input { 
+            width: calc(100% - 24px); 
+            padding: 12px; 
+            margin-bottom: 1rem; 
+            border-radius: 6px; 
+            border: 1px solid #ccc; 
+            font-size: 1rem; 
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background-color: var(--success-color); 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 1.1rem; 
+            font-weight: bold;
+            cursor: pointer; 
+            transition: background-color 0.2s; 
+        }
+        button:hover { background-color: #218838; }
+        
+        /* Utilidades */
+        .hidden { display: none; }
+        
+        /* Dashboard Styles */
+        #dashboard-view h2 { 
+            border-bottom: 2px solid var(--secondary-color); 
+            padding-bottom: 0.5rem; 
+            margin-bottom: 1.5rem;
+        }
+        
+        .dashboard-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 1rem; 
+            margin-top: 1.5rem; 
+            text-align: center; 
+        }
+        
+        .stat-card { 
+            background: var(--secondary-color); 
+            padding: 1rem; 
+            border-radius: 8px; 
+            border: 1px solid #dee2e6;
+        }
+        
+        .stat-card h3 { 
+            margin: 0 0 0.5rem 0; 
+            font-size: 0.85rem; 
+            color: var(--light-text-color); 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-card .data { 
+            font-size: 1.8rem; 
+            font-weight: 700; 
+            color: var(--primary-color); 
+            margin: 0;
+        }
+        
+        /* Indicadores de estado */
+        .status-dot { 
+            height: 10px; 
+            width: 10px; 
+            border-radius: 50%; 
+            display: inline-block; 
+            margin-right: 6px; 
+            vertical-align: middle;
+        }
+        .status-dot.active { background-color: var(--success-color); box-shadow: 0 0 4px var(--success-color); }
+        .status-dot.inactive { background-color: var(--danger-color); }
+        
+        /* Resumen */
+        .summary-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 1rem; 
+            margin-top: 1rem; 
+        }
+        
+        /* Tabla */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        #history-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 0.9rem; 
+        }
+        #history-table th, #history-table td { 
+            padding: 10px; 
+            border-bottom: 1px solid #eee; 
+            text-align: left; 
+        }
+        #history-table th { 
+            background-color: var(--secondary-color); 
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        #history-table tr:hover { background-color: #f9f9f9; }
+        
+        /* Mensajes */
+        #error-message { 
+            color: var(--danger-color); 
+            text-align: center; 
+            margin-top: 1rem; 
+            padding: 0.5rem;
+            background-color: #ffe6e6;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        /* Responsivo para móviles */
+        @media (max-width: 600px) {
+            .summary-grid { grid-template-columns: 1fr; }
+            .container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- VISTA 1: LOGIN -->
+    <div id="login-view">
+        <h1>Portal de Cliente</h1>
+        <p>Introduzca la clave de acceso proporcionada con su equipo.</p>
+        <input type="password" id="password" placeholder="Clave de acceso">
+        <button id="login-button">Acceder</button>
+    </div>
+
+    <!-- VISTA 2: INGRESAR MAC -->
+    <div id="mac-view" class="hidden">
+        <h2>Mi Dispositivo</h2>
+        <p>Introduzca el número de serie (MAC) de su estabilizador.</p>
+        <input type="text" id="mac-input" placeholder="Ej: 27:4C:0D:D0:B7:CF" style="text-transform: uppercase;">
+        <button id="mac-button">Ver Mi Dashboard</button>
+        <p style="font-size: 0.8rem; margin-top: 1rem;">El número de serie se encuentra en la etiqueta lateral del equipo.</p>
+    </div>
+
+    <!-- VISTA 3: DASHBOARD -->
+    <div id="dashboard-view" class="hidden">
+        <h2 id="device-mac-display">Dashboard del Equipo</h2>
+        
+        <!-- Tarjetas Principales -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <h3>Estado</h3>
+                <p class="data" id="status-text" style="font-size: 1.2rem;">--</p>
+            </div>
+            <div class="stat-card">
+                <h3>V. Entrada</h3>
+                <p class="data"><span id="live-vin">--</span> V</p>
+            </div>
+            <div class="stat-card">
+                <h3>V. Salida</h3>
+                <p class="data"><span id="live-vout">--</span> V</p>
+            </div>
+            <div class="stat-card">
+                <h3>Derivación</h3>
+                <p class="data" id="live-tap">--</p>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 2rem; color: var(--primary-color); font-size: 1.1rem;">Resumen de las Últimas 24 Horas</h3>
+        <div class="summary-grid">
+            <div class="stat-card">
+                <h3>Mínimo</h3>
+                <p class="data" id="summary-min" style="font-size: 1.4rem;">--</p>
+            </div>
+            <div class="stat-card">
+                <h3>Promedio</h3>
+                <p class="data" id="summary-avg" style="font-size: 1.4rem;">--</p>
+            </div>
+            <div class="stat-card">
+                <h3>Máximo</h3>
+                <p class="data" id="summary-max" style="font-size: 1.4rem;">--</p>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 2rem; color: var(--primary-color); font-size: 1.1rem;">Historial Reciente</h3>
+        <div class="table-container">
+            <table id="history-table">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Entrada</th>
+                        <th>Salida</th>
+                        <th>Evento</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <tr><td colspan="4" style="text-align:center;">Cargando datos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <button id="refresh-button" style="margin-top: 2rem; background-color: var(--primary-color);">Actualizar Datos Ahora</button>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem;">Actualización automática cada 15 segundos.</p>
+    </div>
+    
+    <p id="error-message" class="hidden"></p>
+</div>
+
+<!-- LÓGICA JAVASCRIPT COMPLETA -->
+<script>
+    // --- 1. CONFIGURACIÓN DE CONEXIÓN ---
+    const SUPABASE_URL = 'https://ezvcuhzlegiphfaybhti.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6dmN1aHpsZWdpcGhmYXliaHRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1MTMsImV4cCI6MjA3ODc3MjUxM30.MZHkXMveud8KjPKkM5h3DjsEWkaBS30tf4CipuxFyNc';
+    const MVP_PASSWORD = 'consoy2025';
+
+    // ** CORRECCIÓN AQUÍ: Usamos 'supabaseClient' para evitar conflictos de nombres **
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // --- 2. VARIABLES DE ESTADO ---
+    const views = {
+        login: document.getElementById('login-view'),
+        mac: document.getElementById('mac-view'),
+        dashboard: document.getElementById('dashboard-view')
+    };
+    const errorMessage = document.getElementById('error-message');
+    let activeDeviceMac = null;
+    let dataFetchInterval = null;
+
+    // --- 3. FUNCIONES DE NAVEGACIÓN ---
+    function showView(viewName) {
+        // Ocultar todas las vistas
+        Object.values(views).forEach(view => view.classList.add('hidden'));
+        // Mostrar la deseada
+        views[viewName].classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+    }
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.remove('hidden');
+    }
+
+    // --- 4. MANEJO DE EVENTOS (BOTONES) ---
+    
+    // Botón Login
+    document.getElementById('login-button').addEventListener('click', () => {
+        const pass = document.getElementById('password').value;
+        if (pass === MVP_PASSWORD) {
+            showView('mac');
+        } else {
+            showError('Clave de acceso incorrecta. Inténtelo de nuevo.');
+        }
+    });
+
+    // Botón MAC
+    document.getElementById('mac-button').addEventListener('click', () => {
+        const macInput = document.getElementById('mac-input').value.trim();
+        if (macInput) {
+            activeDeviceMac = macInput.toUpperCase(); // Normalizar a mayúsculas
+            document.getElementById('device-mac-display').textContent = `Dashboard del Equipo: ${activeDeviceMac}`;
+            
+            showView('dashboard');
+            fetchAllData(); // Carga inicial
+            
+            // Iniciar ciclo automático
+            if (dataFetchInterval) clearInterval(dataFetchInterval);
+            dataFetchInterval = setInterval(fetchAllData, 15000); // Cada 15s
+        } else {
+            showError('Por favor, introduzca un número de serie válido.');
+        }
+    });
+    
+    // Botón Refrescar Manual
+    document.getElementById('refresh-button').addEventListener('click', fetchAllData);
+
+    // --- 5. LÓGICA DE DATOS (SUPABASE) ---
+    async function fetchAllData() {
+        if (!activeDeviceMac) return;
+        
+        // Calcular fecha de hace 24 horas
+        const now = new Date();
+        const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000)).toISOString();
+
+        // Consulta a Supabase usando 'supabaseClient'
+        let { data, error } = await supabaseClient
+            .from('readings')
+            .select('*')
+            .eq('device_mac', activeDeviceMac)
+            .gte('created_at', twentyFourHoursAgo)
+            .order('created_at', { ascending: false })
+            .limit(50); // Traemos las últimas 50 para estadísticas
+
+        if (error) {
+            console.error(error);
+            return showError("Error de conexión al buscar el dispositivo. Verifique el número de serie.");
+        }
+
+        if (!data || data.length === 0) {
+            return showNoData();
+        }
+
+        updateDashboardUI(data);
+    }
+
+    function updateDashboardUI(data) {
+        const latest = data[0]; // El dato más nuevo
+        
+        // --- A. Estado Online/Offline ---
+        const lastReadingTime = new Date(latest.created_at).getTime();
+        const minutesSinceLast = (new Date().getTime() - lastReadingTime) / (1000 * 60);
+        const statusText = document.getElementById('status-text');
+        
+        if (minutesSinceLast < 10) {
+            statusText.innerHTML = '<span class="status-dot active"></span>En Línea';
+            statusText.style.color = 'var(--success-color)';
+        } else {
+            statusText.innerHTML = '<span class="status-dot inactive"></span>Desconectado';
+            statusText.style.color = 'var(--danger-color)';
+        }
+
+        // --- B. Datos en Tiempo Real ---
+        document.getElementById('live-vin').textContent = latest.voltaje_in.toFixed(1);
+        document.getElementById('live-vout').textContent = latest.voltaje_out.toFixed(1);
+        document.getElementById('live-tap').textContent = latest.derivacion_actual > 0 ? latest.derivacion_actual + "V" : 'Bypass';
+
+        // --- C. Resumen 24H (Estadísticas) ---
+        const voltagesIn = data.map(r => r.voltaje_in);
+        const minVal = Math.min(...voltagesIn);
+        const maxVal = Math.max(...voltagesIn);
+        const avgVal = voltagesIn.reduce((a, b) => a + b, 0) / voltagesIn.length;
+
+        document.getElementById('summary-min').textContent = minVal.toFixed(1) + " V";
+        document.getElementById('summary-max').textContent = maxVal.toFixed(1) + " V";
+        document.getElementById('summary-avg').textContent = avgVal.toFixed(1) + " V";
+
+        // --- D. Tabla Histórica (Últimas 10) ---
+        const historyBody = document.getElementById('history-body');
+        historyBody.innerHTML = ''; // Limpiar
+        
+        const latest10 = data.slice(0, 10);
+        
+        latest10.forEach(reading => {
+            let eventHtml = '<span style="color:green">Normal</span>';
+            
+            // Lógica simple de eventos
+            if (reading.voltaje_in < 170) eventHtml = '<span style="color:orange; font-weight:bold;">Bajón</span>';
+            else if (reading.voltaje_in > 240) eventHtml = '<span style="color:red; font-weight:bold;">Sobretensión</span>';
+            
+            const dateObj = new Date(reading.created_at);
+            const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const row = `<tr>
+                <td>${timeStr}</td>
+                <td>${reading.voltaje_in.toFixed(1)} V</td>
+                <td>${reading.voltaje_out.toFixed(1)} V</td>
+                <td>${eventHtml}</td>
+            </tr>`;
+            historyBody.innerHTML += row;
+        });
+    }
+
+    function showNoData() {
+        // Limpiar datos si no hay resultados
+        document.getElementById('status-text').innerHTML = '<span class="status-dot inactive"></span>Sin Datos';
+        document.getElementById('live-vin').textContent = "--";
+        document.getElementById('live-vout').textContent = "--";
+        document.getElementById('history-body').innerHTML = '<tr><td colspan="4" style="text-align:center;">No se encontraron registros recientes para este equipo.</td></tr>';
+        showError("No se encontraron datos. Asegúrese de que el simulador esté corriendo y enviando datos.");
+    }
+
+    // Iniciar app
+    showView('login');
+
+</script>
+
+</body>
+</html>
+
+  
